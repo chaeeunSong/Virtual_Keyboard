@@ -1,41 +1,86 @@
 
 // Dark Theme UI 
 export class Keyboard {
-    #swichEl;   // swich엘리먼트. 앞에 #(해시)를 붙히면 privite class, 클래스 외부에서 값을 변경해도 바뀌지 않음 (ES2019)
-    #fontSelectEl;  // font select 엘리먼트
-    constructor() {     // 생성자
+    #swichEl;   
+    #fontSelectEl;  
+    #containerEl;
+    #keboradEl;
+    #inputGroupEl;
+    #inputEl;
+
+    constructor() {    
         this.#assignElement();
         this.#addEvent();
     }
-        
-    #assignElement() {  // 엘리먼트를 가져온다
-        this.#swichEl = document.getElementById("switch");  // html의 아이디값 swich 엘리먼트를 가져옴
-        this.#fontSelectEl = document.getElementById("font");   // html의 아이디값 font 엘리먼트를 가져옴
+    
+    /**
+     * 1. 저번시간에 작업한 코드 리팩토링
+     * #containerEl 추가로 #swichEl, #fontSelectEl은 구지 document 단에서부터 #switch를 찾을필요없음
+     * getElementById는 document에서만 사용할수 있기 때문에 querySelector로 바꿔고 id탐색으로 #추가
+     */
+    #assignElement() { 
+        this.#containerEl = document.getElementById("container");
+        this.#swichEl = this.#containerEl.querySelector("#switch");  
+        this.#fontSelectEl = this.#containerEl.querySelector("#font");   
+        this.#keboradEl = this.#containerEl.querySelector("#keyboard"); // #container엘리먼트 안의 #keyboard를 가져옴
+        this.#inputGroupEl = this.#containerEl.querySelector("#input-group");
+        this.#inputEl = this.#inputGroupEl.querySelector("#input");
     }
 
-    #addEvent() {   // 이벤트를 붙힌다
-        // 이 스위치 엘리먼트가 change되는 이벤트가 일어나면
-        this.#swichEl.addEventListener("change", (event) => {
-            // HTML의 엘리먼트를 가져와 속성값을 정한다.
-            document.documentElement.setAttribute(
-                // setAttribute 의 첫번째 값은 속성 이름
-                "theme",
-                // setAttribute의 두번째 값은 속성 값 (attribute의 값은 뭘로 해줄건지)
-                // 삼항연산자를 사용하여 chaecked 된 값이 true면 dark-mode, false면 빈 스트링("")
-                event.target.checked ? "dark-mode" : ""
-            );
-            // 콘솔창에 일어난 이벤트 타겟의 checked 여부를 알려주세요
-            console.log(event.target.checked);
-        });
+    /**
+     * 2. 보통 이벤트핸들러는 관리하기 쉽게 분리함
+     * 이벤트핸들러를 분리해서 리팩토링
+     */    
+    #addEvent() {   
+        this.#swichEl.addEventListener("change", this.#onChangeTheme);
+        this.#fontSelectEl.addEventListener("change", this.#onChangeFont);
 
-        // fontSelect ui event
-        // 이 fontSelect 엘리먼트가 change 되는 이벤트가 일어나면
-        this.#fontSelectEl.addEventListener("change", (event) => {
-            // html의 body의 스타일 중 fontFamily를 이벤트 타겟의 value로 바꿔주세요
-            document.body.style.fontFamily = event.target.value;
-            // 콘솔창에 일어난 이벤트 타겟의 value 를 알려주세요
-            console.log(event.target.value);    // select박스는 value를 갖고올수있다
-        });
+        // 3. Keyboard Event 적용
+        // keydown 이벤트가 일어나면
+        document.addEventListener("keydown", this.#onKeyDown.bind(this));
+        document.addEventListener("keyup", this.#onKeyUp.bind(this));        
+        this.#inputEl.addEventListener("input", this.#onInput);
     }
 
+    #onInput(event) {
+        // input에 입력이 발생할때마다 이벤트핸들러 동작하게해줌
+        event.target.value = event.target.value.replace(/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/, "");
+    }
+
+    #onKeyDown(event) {
+        // 7. 한글 입력 불가 기능
+        this.#inputGroupEl.classList.toggle(
+            "error", 
+            /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(event.key)   // 정규식 사용으로 한글검열
+        );
+
+        // 4. 이 keboardEl 엘리먼트에 event.code속성을 가지고 있는 셀렉터(data-code)을 찾아서 active 클래스를 붙혀라
+        this.#keboradEl
+        .querySelector(`[data-code=${event.code}]`)
+        ?.classList.add("active");
+        // ^ 6. 글자자판 외에 기능키 입력 시 나오는 에러 처리법
+        // ? 옵셔널체이닝사용. 원하는 요소를 찾지못하면 에러를 뱉지않고 undefinde를 리턴하고 함수를 실행하지않는다.
+    }
+
+    #onKeyUp(event) {
+        // 5. 이 keboardEl 엘리먼트에 event.code속성을 가지고 있는 셀렉터(data-code)을 찾아서 remove 클래스
+        this.#keboradEl
+        .querySelector(`[data-code=${event.code}]`)
+        ?.classList.remove("active");
+    }
+
+    #onChangeTheme(event){
+        document.documentElement.setAttribute(
+            "theme",
+            event.target.checked ? "dark-mode" : ""
+        );
+    }
+
+    #onChangeFont(event){
+        document.body.style.fontFamily = event.target.value;
+    }
 }
+
+
+
+
